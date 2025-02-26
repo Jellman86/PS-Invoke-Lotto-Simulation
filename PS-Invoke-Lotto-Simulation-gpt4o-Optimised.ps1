@@ -30,6 +30,7 @@ Switch ($drawName) {
     }
     Default {
         Write-Error "Invalid draw name: $drawName"
+        exit 1
     }
 }
 
@@ -37,14 +38,14 @@ function Get-Draw {
     $numbers = 1..$maxDrawNumber | Get-Random -Count $ballsDrawn
     $specialNumbers = if ($specialBallsDrawn -gt 0) { 1..$maxSpecialDrawNumber | Get-Random -Count $specialBallsDrawn } else { @() }
     $drawResult = $numbers + $specialNumbers
-    $drawResult
+    return $drawResult
 }
 
 function Get-LD {
     $numbers = 1..$maxDrawNumber | Get-Random -Count $ballsDrawn
     $specialNumbers = if ($specialBallsDrawn -gt 0) { 1..$maxSpecialDrawNumber | Get-Random -Count $specialBallsDrawn } else { @() }
     $luckyDipResult = $numbers + $specialNumbers
-    $luckyDipResult
+    return $luckyDipResult
 }
 
 Function invoke-DrawSimulation {
