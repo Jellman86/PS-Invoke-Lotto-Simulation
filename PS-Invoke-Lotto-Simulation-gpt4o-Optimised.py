@@ -6,6 +6,9 @@ import random
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from collections import deque
+import pynvml
+from matplotlib.widgets import Button
+import matplotlib.gridspec as gridspec
 
 # Define the lottery parameters
 draw_params = {
@@ -60,6 +63,19 @@ def compare_draws_kernel(draw, results, draws):
         else:
             results[thread_id] = 0  # Initialize to 0
 
+def get_gpu_load():
+    try:
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        info = pynvml.nvmlDeviceGetUtilizationRates(handle)
+        return info.gpu
+    except:
+        return 0
+
+def exit_simulation(event):
+    plt.close('all')
+    exit()
+
 def main(draw_name, simulate_draw, num_simulations=1000000):
     if draw_name not in draw_params:
         print(f"Invalid draw name: {draw_name}")
@@ -69,25 +85,46 @@ def main(draw_name, simulate_draw, num_simulations=1000000):
     total_balls = balls_drawn + special_balls_drawn
 
     if simulate_draw.lower() in ["yes", "y"]:
-        # Initialize visualization
-        plt.ion()  # Enable interactive mode
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+        # Initialize visualization with GridSpec
+        plt.ion()
+        fig = plt.figure(figsize=(12, 10))
+        gs = gridspec.GridSpec(3, 2, height_ratios=[3, 3, 1])
+        
+        # Create subplots
+        ax1 = fig.add_subplot(gs[0, :])  # Matches plot
+        ax2 = fig.add_subplot(gs[1, :])  # Histogram
+        ax3 = fig.add_subplot(gs[2, 0])  # GPU load
+        ax_button = fig.add_subplot(gs[2, 1])  # Exit button
         
         # Setup real-time plotting
         max_points = 100
         x_data = deque(maxlen=max_points)
         y_data = deque(maxlen=max_points)
+        gpu_data = deque(maxlen=max_points)
+        
         line, = ax1.plot([], [], 'r-')
+        gpu_line, = ax3.plot([], [], 'g-')
+        
         ax1.set_xlim(0, max_points)
-        ax1.set_ylim(0, 10)  # Adjust based on expected matches
+        ax1.set_ylim(0, 10)
         ax1.set_title('Real-time Matches')
         ax1.set_xlabel('Time Window')
         ax1.set_ylabel('Matches Found')
+        
+        ax3.set_xlim(0, max_points)
+        ax3.set_ylim(0, 100)
+        ax3.set_title('GPU Load')
+        ax3.set_xlabel('Time Window')
+        ax3.set_ylabel('GPU Usage %')
 
         # Initialize histogram
         ax2.set_title('Number Frequency Distribution')
         ax2.set_xlabel('Numbers')
         ax2.set_ylabel('Frequency')
+
+        # Add exit button
+        exit_btn = Button(ax_button, 'Exit Simulation')
+        exit_btn.on_clicked(exit_simulation)
 
         # Initialize random number generator states
         rng_states = create_xoroshiro128p_states(num_simulations, seed=random.randint(0, 1000000))
@@ -139,7 +176,10 @@ def main(draw_name, simulate_draw, num_simulations=1000000):
             # Update line plot
             x_data.append(batch)
             y_data.append(batch_matches)
+            gpu_data.append(get_gpu_load())
+            
             line.set_data(range(len(x_data)), y_data)
+            gpu_line.set_data(range(len(x_data)), gpu_data)
             
             # Update histogram
             all_numbers.extend(batch_results.flatten())
@@ -149,6 +189,11 @@ def main(draw_name, simulate_draw, num_simulations=1000000):
             
             # Refresh the plot
             plt.pause(0.01)
+            
+            # Check if figure is closed
+            if not plt.get_fignums():
+                print("Simulation stopped by user")
+                return
 
         end_time = time.time()
 
