@@ -1,6 +1,6 @@
 param (
-    [string]$drawName = "euromillions",
-    [string]$simulateDraw = "yes"
+    [string]$drawName = "",
+    [string]$simulateDraw = ""
 )
 
 Switch ($drawName) {
