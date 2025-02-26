@@ -106,7 +106,7 @@ Function invoke-DrawSimulation {
 }
 
 if($simulateDraw -ilike "y*"){
-    invoke-DrawSimulation
+    invoke-DrawSimulation;
 }else{
     get-ld;
 }
